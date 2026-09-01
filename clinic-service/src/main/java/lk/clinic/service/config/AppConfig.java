@@ -15,7 +15,7 @@ public class AppConfig {
         ds.setDriverClassName("com.mysql.cj.jdbc.Driver");
         ds.setUrl("jdbc:mysql://localhost:3306/sunrise_dental?useSSL=false&serverTimezone=UTC");
         ds.setUsername("root");
-        ds.setPassword("YOUR_PASSWORD");  // <-- YOUR REAL PASSWORD
+        ds.setPassword("penguin@");  // <-- YOUR REAL PASSWORD
         return ds;
     }
 
