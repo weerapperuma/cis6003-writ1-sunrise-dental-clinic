@@ -1,5 +1,6 @@
 package lk.clinic.service.repository;
 
+import lk.clinic.service.dto.AppointmentBillingInfo;
 import lk.clinic.service.dto.AppointmentSummary;
 import lk.clinic.service.model.Appointment;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -41,7 +42,7 @@ public class AppointmentRepository {
 
     public List<AppointmentSummary> search(String date, Integer dentistId, String patientName) {
         StringBuilder sql = new StringBuilder(
-                "SELECT a.appointment_number, p.patient_name, d.dentist_name, t.treatment_type, " +
+                "SELECT a.appointment_id, a.appointment_number, p.patient_name, d.dentist_name, t.treatment_type, " +
                         "a.appointment_date, a.appointment_time, a.status " +
                         "FROM appointments a " +
                         "JOIN patients p   ON p.patient_id   = a.patient_id " +
@@ -65,6 +66,7 @@ public class AppointmentRepository {
         sql.append(" ORDER BY a.appointment_date, a.appointment_time");
 
         return jdbc.query(sql.toString(), (rs, i) -> new AppointmentSummary(
+                        rs.getInt("appointment_id"),
                         rs.getString("appointment_number"),
                         rs.getString("patient_name"),
                         rs.getString("dentist_name"),
@@ -73,5 +75,18 @@ public class AppointmentRepository {
                         rs.getTime("appointment_time").toLocalTime().toString(),
                         rs.getString("status")),
                 params.toArray());
+    }
+
+    public AppointmentBillingInfo findBillingInfo(int appointmentId) {
+        List<AppointmentBillingInfo> list = jdbc.query(
+                "SELECT a.appointment_id, a.appointment_number, t.treatment_fee, t.consultation_fee " +
+                        "FROM appointments a JOIN treatments t ON t.treatment_id = a.treatment_id " +
+                        "WHERE a.appointment_id = ?",
+                (rs, i) -> new AppointmentBillingInfo(rs.getInt("appointment_id"),
+                        rs.getString("appointment_number"),
+                        rs.getBigDecimal("treatment_fee"),
+                        rs.getBigDecimal("consultation_fee")),
+                appointmentId);
+        return list.isEmpty() ? null : list.get(0);
     }
 }

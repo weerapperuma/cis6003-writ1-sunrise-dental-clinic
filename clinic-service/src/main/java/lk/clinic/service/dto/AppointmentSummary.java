@@ -1,6 +1,7 @@
 package lk.clinic.service.dto;
 
 public record AppointmentSummary(
+        int appointmentId,
         String appointmentNumber,
         String patientName,
         String dentistName,
@@ -8,4 +9,4 @@ public record AppointmentSummary(
         String appointmentDate,
         String appointmentTime,
         String status
-) {}
+) {}
