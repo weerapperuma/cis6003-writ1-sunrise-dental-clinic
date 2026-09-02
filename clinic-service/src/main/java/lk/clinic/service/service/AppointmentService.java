@@ -2,6 +2,7 @@ package lk.clinic.service.service;
 
 import lk.clinic.service.dto.AppointmentRegistrationRequest;
 import lk.clinic.service.dto.AppointmentResponse;
+import lk.clinic.service.dto.AppointmentSummary;
 import lk.clinic.service.model.Appointment;
 import lk.clinic.service.model.Patient;
 import lk.clinic.service.repository.AppointmentRepository;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Service
 public class AppointmentService {
@@ -73,5 +75,9 @@ public class AppointmentService {
             return AppointmentResponse.conflict(
                     "Dentist is already booked for the selected date and time.");
         }
+    }
+
+    public List<AppointmentSummary> search(String date, Integer dentistId, String patientName) {
+        return appointmentRepository.search(date, dentistId, patientName);
     }
 }

@@ -1,11 +1,14 @@
 package lk.clinic.service.repository;
 
+import lk.clinic.service.dto.AppointmentSummary;
 import lk.clinic.service.model.Appointment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Repository
 public class AppointmentRepository {
@@ -34,5 +37,41 @@ public class AppointmentRepository {
                 appointment.appointmentDate(),
                 appointment.appointmentTime(),
                 appointment.status());
+    }
+
+    public List<AppointmentSummary> search(String date, Integer dentistId, String patientName) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT a.appointment_number, p.patient_name, d.dentist_name, t.treatment_type, " +
+                        "a.appointment_date, a.appointment_time, a.status " +
+                        "FROM appointments a " +
+                        "JOIN patients p   ON p.patient_id   = a.patient_id " +
+                        "JOIN dentists d   ON d.dentist_id   = a.dentist_id " +
+                        "JOIN treatments t ON t.treatment_id = a.treatment_id " +
+                        "WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (date != null && !date.isBlank()) {
+            sql.append(" AND a.appointment_date = ?");
+            params.add(LocalDate.parse(date));
+        }
+        if (dentistId != null) {
+            sql.append(" AND a.dentist_id = ?");
+            params.add(dentistId);
+        }
+        if (patientName != null && !patientName.isBlank()) {
+            sql.append(" AND p.patient_name LIKE ?");
+            params.add("%" + patientName + "%");
+        }
+        sql.append(" ORDER BY a.appointment_date, a.appointment_time");
+
+        return jdbc.query(sql.toString(), (rs, i) -> new AppointmentSummary(
+                        rs.getString("appointment_number"),
+                        rs.getString("patient_name"),
+                        rs.getString("dentist_name"),
+                        rs.getString("treatment_type"),
+                        rs.getDate("appointment_date").toLocalDate().toString(),
+                        rs.getTime("appointment_time").toLocalTime().toString(),
+                        rs.getString("status")),
+                params.toArray());
     }
 }
