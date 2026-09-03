@@ -7,6 +7,9 @@ on:
     branches: [ "main", "master" ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     name: Build, Test & Package
@@ -21,7 +24,14 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          cache: maven
+
+      - name: Cache Maven packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
 
       - name: Run Unit & Integration Tests
         run: mvn -B test --file clinic-service/pom.xml
@@ -29,7 +39,7 @@ jobs:
       - name: Package WAR Artifact
         run: mvn -B package -DskipTests --file clinic-service/pom.xml
 
-      - name: Upload Test Results (Surefire Reports)
+      - name: Upload Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
