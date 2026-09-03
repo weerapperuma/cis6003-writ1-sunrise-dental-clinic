@@ -5,13 +5,12 @@ import lk.clinic.service.dto.LoginRequest;
 import lk.clinic.service.dto.LoginResponse;
 import lk.clinic.service.service.AuthService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
-@RequestMapping("api/auth")
+@RequestMapping({"/api/auth", "api/auth"})
 public class AuthController {
     private final AuthService authService;
 
@@ -35,5 +34,13 @@ public class AuthController {
     public ResponseEntity<String> logout(HttpSession session) {
         session.invalidate();
         return ResponseEntity.ok("Logged out successfully");
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> me(HttpSession session) {
+        String username = (String) session.getAttribute("loggedInUser");
+        if (username == null) return ResponseEntity.status(401).body(Map.of("success", false));
+        return ResponseEntity.ok(Map.of("success", true, "username", username,
+                "role", session.getAttribute("role")));
     }
 }

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunrise Dental Clinic – Staff Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .demo-creds {
+            margin-top: 18px;
+            padding-top: 14px;
+            border-top: 1px dashed #bcd;
+            font-size: 13px;
+            color: #556;
+        }
+        .demo-creds strong {
+            display: block;
+            margin-bottom: 6px;
+            color: var(--dark);
+        }
+        .demo-btns {
+            display: flex;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .demo-btn {
+            flex: 1;
+            padding: 6px 10px;
+            background: #eef5fb;
+            color: var(--blue);
+            border: 1px solid var(--blue);
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-top: 0;
+            transition: all 0.2s;
+        }
+        .demo-btn:hover {
+            background: var(--blue);
+            color: #fff;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="login-body">
+<div class="card login-card">
+    <h1>🦷 Sunrise Dental Clinic</h1>
+    <h2>Staff Login</h2>
+    <form id="loginForm">
+        <label for="username">Username</label>
+        <input type="text" id="username" placeholder="e.g. admin" autocomplete="username" required>
+        
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" required>
+        
+        <button type="submit" id="submitBtn">Login</button>
+        <div id="msg" class="msg err" style="display:none"></div>
+
+        <div class="demo-creds">
+            <strong>Quick Fill Test Credentials:</strong>
+            <div class="demo-btns">
+                <button type="button" class="demo-btn" onclick="fillCreds('admin', 'password123')">Admin</button>
+                <button type="button" class="demo-btn" onclick="fillCreds('reception', 'password123')">Receptionist</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    function fillCreds(user, pass) {
+        document.getElementById('username').value = user;
+        document.getElementById('password').value = pass;
+        document.getElementById('username').focus();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
+        const msg = document.getElementById('msg');
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (!username || !password) {
+            showMsg(msg, 'Username and password are required.', false);
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Logging in...';
+
+        try {
+            const { status, data } = await api('/api/auth/login', {
+                method: 'POST',
+                body: JSON.stringify({ username, password })
+            });
+
+            console.log('Login response:', { status, data });
+
+            if (status === 200 && data && data.success) {
+                showMsg(msg, '✓ Login successful! Welcome, ' + (data.fullName || data.username), true);
+                setTimeout(() => {
+                    location.href = 'dashboard.html';
+                }, 700);
+            } else {
+                const errText = (data && data.message) ? data.message : `Login failed (HTTP status ${status})`;
+                showMsg(msg, errText, false);
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            }
+        } catch (err) {
+            console.error('Login error:', err);
+            showMsg(msg, 'Connection error. Ensure Tomcat is running at http://localhost:8080', false);
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Login';
+        }
+    });
+</script>
+</body>
+</html>
