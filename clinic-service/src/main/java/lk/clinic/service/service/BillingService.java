@@ -48,6 +48,13 @@ public class BillingService {
             return BillResponse.conflict("A bill already exists for this appointment (1:1 rule).");
         }
 
+        // Guard: discount must not exceed the sum of treatment and consultation fees
+        BigDecimal totalFees = info.treatmentFee().add(info.consultationFee());
+        if (discount.compareTo(totalFees) > 0) {
+            return BillResponse.error(
+                    "Discount (" + discount + ") cannot exceed total fees (" + totalFees + ").");
+        }
+
         // Strategy preview (cross-checked against the DB trigger result below)
         BigDecimal preview = billingStrategy.calculateTotal(
                 info.treatmentFee(), info.consultationFee(), discount);

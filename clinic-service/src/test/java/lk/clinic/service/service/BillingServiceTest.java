@@ -158,4 +158,32 @@ class BillingServiceTest {
         assertFalse(notFound);
         verify(billRepository, never()).markPaid(999);
     }
+
+    // ─── TDD GREEN test (was RED before BillingService guard was added) ────────
+    // Rule: discount must not exceed (treatmentFee + consultationFee).
+    // This test was written FIRST; BillingService returned no error at that point
+    // so it failed (RED). The guard was then added, making it pass (GREEN).
+    @Test
+    @DisplayName("[TDD] Should reject bill when discount exceeds the sum of treatment and consultation fees")
+    void testDiscountExceedsTotalFees() {
+        int apptId = 7;
+        BigDecimal treatmentFee  = new BigDecimal("2000.00");
+        BigDecimal consultFee    = new BigDecimal("1000.00");
+        // discount 4000 > (2000 + 1000) — must be rejected
+        BigDecimal oversizedDiscount = new BigDecimal("4000.00");
+
+        AppointmentBillingInfo info =
+                new AppointmentBillingInfo(apptId, "APT-20260903-0007", treatmentFee, consultFee);
+        when(appointmentRepository.findBillingInfo(apptId)).thenReturn(info);
+        when(billRepository.existsByAppointment(apptId)).thenReturn(false);
+
+        BillGenerationRequest req = new BillGenerationRequest(apptId, oversizedDiscount);
+        BillResponse res = billingService.generate(req, "admin");
+
+        assertFalse(res.success(), "Discount exceeding total fees must be rejected");
+        assertNotNull(res.message());
+        assertTrue(res.message().toLowerCase().contains("discount"),
+                "Error message must mention 'discount'");
+        verify(billRepository, never()).save(any());
+    }
 }
