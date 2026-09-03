@@ -1,0 +1,45 @@
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build, Test & Package
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Unit & Integration Tests
+        run: mvn -B test --file clinic-service/pom.xml
+
+      - name: Package WAR Artifact
+        run: mvn -B package -DskipTests --file clinic-service/pom.xml
+
+      - name: Upload Test Results (Surefire Reports)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-test-reports
+          path: clinic-service/target/surefire-reports/
+          retention-days: 7
+
+      - name: Upload Built WAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: clinic-service-war
+          path: clinic-service/target/*.war
+          retention-days: 14
