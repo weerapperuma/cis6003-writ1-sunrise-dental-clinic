@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunrise Dental Clinic – User Guide & System Help</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .help-section {
+            margin-bottom: 22px;
+            padding-bottom: 18px;
+            border-bottom: 1px solid var(--border);
+        }
+        .help-section:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .help-section h4 {
+            color: var(--blue);
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .rule-badge {
+            background: #fff8e1;
+            border-left: 4px solid #ffb300;
+            padding: 10px 14px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><a href="dashboard.html">🦷 Sunrise Dental Clinic</a></h1>
+    <nav>
+        <a href="dashboard.html" id="nav-dashboard">Dashboard</a>
+        <a href="appointment.html" id="nav-appointment">New Appointment</a>
+        <a href="search.html" id="nav-search">Search</a>
+        <a href="bill.html" id="nav-bill">Bill</a>
+        <a href="reports.html" id="nav-reports">Reports</a>
+        <a href="help.html" id="nav-help">Help</a>
+    </nav>
+    <div class="header-user">
+        <span class="user-badge"><strong id="headerUsername">...</strong> (<span id="headerRole" class="role-tag">...</span>)</span>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+</header>
+
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h2 class="page" style="margin-bottom:0;">System Guide & Operating Rules</h2>
+        <button class="btn btn-secondary" onclick="handleLogout()" style="padding:7px 16px;">
+            🚪 Exit to Login
+        </button>
+    </div>
+
+    <div class="card">
+        <!-- Clinic Working Hours -->
+        <div class="help-section">
+            <h4>⏰ Clinic Operating Hours</h4>
+            <p style="font-size:14px; color:var(--text);">
+                Sunrise Dental Clinic operates <strong>Monday through Sunday from 08:00 to 17:00</strong>.
+                Appointments cannot be booked outside these clinic hours. Database check constraints automatically reject any booking attempt before 08:00:00 or after 17:00:00.
+            </p>
+        </div>
+
+        <!-- Validation Rules -->
+        <div class="help-section">
+            <h4>🛡️ System Validation Rules</h4>
+            <ul style="margin: 8px 0 0 20px; font-size:14px; line-height:1.7;">
+                <li><strong>Patient Name & Address:</strong> Mandatory text fields.</li>
+                <li><strong>Contact Number:</strong> Must be exactly <strong>10 numeric digits starting with 0</strong> (e.g., <code>0771234567</code>, <code>0719876543</code>).</li>
+                <li><strong>Appointment Date:</strong> Must be today or a future date. Past dates are automatically blocked by client and server validation.</li>
+                <li><strong>Time Range:</strong> Time slots must fall between <code>08:00</code> and <code>17:00</code>.</li>
+                <li><strong>Anti Double-Booking Rule:</strong> A dentist cannot be double-booked for the exact same date and time. This is enforced both at the application service level and by database trigger/unique index.</li>
+                <li><strong>1:1 Billing Rule:</strong> Each appointment has at most one corresponding bill. Re-generating a bill for an existing appointment produces an HTTP 409 Conflict.</li>
+            </ul>
+        </div>
+
+        <!-- Page Guide -->
+        <div class="help-section">
+            <h4>📖 Modules & Workflow Guide</h4>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px; margin-top:10px;">
+                <div style="background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:12px;">
+                    <strong>1. Dashboard</strong>
+                    <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+                        Displays quick links to all clinic modules and loads today's live appointment schedule from the daily reporting view.
+                    </p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:12px;">
+                    <strong>2. New Appointment</strong>
+                    <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+                        Registers patient demographics and schedules a consultation or treatment with live fee preview.
+                    </p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:12px;">
+                    <strong>3. Search Schedule</strong>
+                    <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+                        Filters appointments by date, doctor, or patient name. Provides 1-click links to transfer appointments into the billing module.
+                    </p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:12px;">
+                    <strong>4. Bill & Cashier</strong>
+                    <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+                        Generates total invoices using database triggers, tracks line items, applies discounts, records cash payments, and prints receipts.
+                    </p>
+                </div>
+                <div style="background:#f8fafc; border:1px solid var(--border); border-radius:6px; padding:12px;">
+                    <strong>5. Practice Reports</strong>
+                    <p style="font-size:13px; color:var(--text-muted); margin-top:4px;">
+                        Renders tabular reports for daily schedules, individual dentist workloads, and total accumulated revenue.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Roles & Exit -->
+        <div class="help-section">
+            <h4>👥 Staff Roles & Access</h4>
+            <p style="font-size:14px; color:var(--text); margin-bottom:14px;">
+                <strong>ADMIN:</strong> Full administrative privileges over clinical operations, staff accounts, system health, and financial reporting.<br>
+                <strong>RECEPTIONIST:</strong> Front-desk operations including patient intake, appointment scheduling, patient check-in, and invoice settlements.
+            </p>
+            <button class="btn btn-secondary" onclick="handleLogout()">
+                🚪 Log Out & Exit Terminal
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    initAuth('help');
+</script>
+</body>
+</html>

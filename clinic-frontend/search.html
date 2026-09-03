@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunrise Dental Clinic – Search Appointments</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <h1><a href="dashboard.html">🦷 Sunrise Dental Clinic</a></h1>
+    <nav>
+        <a href="dashboard.html" id="nav-dashboard">Dashboard</a>
+        <a href="appointment.html" id="nav-appointment">New Appointment</a>
+        <a href="search.html" id="nav-search">Search</a>
+        <a href="bill.html" id="nav-bill">Bill</a>
+        <a href="reports.html" id="nav-reports">Reports</a>
+        <a href="help.html" id="nav-help">Help</a>
+    </nav>
+    <div class="header-user">
+        <span class="user-badge"><strong id="headerUsername">...</strong> (<span id="headerRole" class="role-tag">...</span>)</span>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+</header>
+
+<div class="container">
+    <h2 class="page">Search Appointments</h2>
+
+    <!-- Filter Bar Card -->
+    <div class="card">
+        <h3>🔍 Filter Schedule</h3>
+        <form id="searchForm" onsubmit="event.preventDefault(); performSearch();">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="filterDate">Appointment Date</label>
+                    <input type="date" id="filterDate">
+                </div>
+
+                <div class="form-group">
+                    <label for="filterDentist">Assigned Dentist</label>
+                    <select id="filterDentist">
+                        <option value="">-- All Dentists --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="filterPatient">Patient Name</label>
+                    <input type="text" id="filterPatient" placeholder="Search by patient name...">
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; margin-top:4px;">
+                <button type="submit" id="btnSearch">
+                    🔍 Search
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                    Reset Filters
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Table Card -->
+    <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3>Appointment Records (<span id="resultCount">0 found</span>)</h3>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Appointment #</th>
+                        <th>Patient Name</th>
+                        <th>Dentist</th>
+                        <th>Treatment</th>
+                        <th>Date</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="searchResultsBody">
+                    <tr>
+                        <td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px;">
+                            Enter search criteria above and click <strong>Search</strong> to display appointment records.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    async function loadDentists() {
+        const dentistSelect = document.getElementById('filterDentist');
+        const res = await api('/api/meta/dentists');
+        if (res.status === 200 && Array.isArray(res.data)) {
+            res.data.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name;
+                dentistSelect.appendChild(opt);
+            });
+        }
+    }
+
+    async function performSearch() {
+        const date = document.getElementById('filterDate').value;
+        const dentistId = document.getElementById('filterDentist').value;
+        const patientName = document.getElementById('filterPatient').value.trim();
+        const tbody = document.getElementById('searchResultsBody');
+        const countSpan = document.getElementById('resultCount');
+
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px;">Searching records...</td></tr>';
+
+        const params = [];
+        if (date) params.push(`date=${encodeURIComponent(date)}`);
+        if (dentistId) params.push(`dentistId=${encodeURIComponent(dentistId)}`);
+        if (patientName) params.push(`patientName=${encodeURIComponent(patientName)}`);
+
+        const queryStr = params.length ? '?' + params.join('&') : '';
+        const { status, data } = await api('/api/appointments/search' + queryStr);
+
+        if (status === 200 && data && Array.isArray(data.appointments)) {
+            const list = data.appointments;
+            countSpan.textContent = `${list.length} found`;
+            tbody.innerHTML = '';
+
+            if (list.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">
+                            <div style="font-size:32px; margin-bottom:6px;">📂</div>
+                            <strong>No appointments found matching your search.</strong><br>
+                            Try adjusting your filters or date range.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            list.forEach(item => {
+                const tr = document.createElement('tr');
+                let statusBadge = '<span class="badge badge-scheduled">' + item.status + '</span>';
+                if (item.status === 'PAID') statusBadge = '<span class="badge badge-paid">PAID</span>';
+                else if (item.status === 'CANCELLED') statusBadge = '<span class="badge" style="background:#ffebee; color:#c62828;">CANCELLED</span>';
+
+                const apptId = item.appointmentId || '';
+                const billLink = apptId
+                    ? `<a href="bill.html?appointmentId=${apptId}" class="btn" style="padding:4px 8px; font-size:12px; text-decoration:none;">💳 Bill</a>`
+                    : `<a href="bill.html" class="btn btn-secondary" style="padding:4px 8px; font-size:12px; text-decoration:none;">Go to Bill</a>`;
+
+                tr.innerHTML = `
+                    <td><code>${item.appointmentNumber || ''}</code></td>
+                    <td><strong>${item.patientName || ''}</strong></td>
+                    <td>${item.dentistName || ''}</td>
+                    <td>${item.treatmentType || ''}</td>
+                    <td>${item.appointmentDate || ''}</td>
+                    <td>${item.appointmentTime || ''}</td>
+                    <td>${statusBadge}</td>
+                    <td>${billLink}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--err); padding:18px;">Error querying appointments.</td></tr>';
+            countSpan.textContent = 'Error';
+        }
+    }
+
+    function resetFilters() {
+        document.getElementById('filterDate').value = '';
+        document.getElementById('filterDentist').value = '';
+        document.getElementById('filterPatient').value = '';
+        performSearch();
+    }
+
+    async function init() {
+        await initAuth('search');
+        await loadDentists();
+        // Load initial records
+        performSearch();
+    }
+
+    init();
+</script>
+</body>
+</html>

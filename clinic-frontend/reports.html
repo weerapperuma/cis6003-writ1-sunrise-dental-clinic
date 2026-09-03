@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunrise Dental Clinic – Practice Reports</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+    <h1><a href="dashboard.html">🦷 Sunrise Dental Clinic</a></h1>
+    <nav>
+        <a href="dashboard.html" id="nav-dashboard">Dashboard</a>
+        <a href="appointment.html" id="nav-appointment">New Appointment</a>
+        <a href="search.html" id="nav-search">Search</a>
+        <a href="bill.html" id="nav-bill">Bill</a>
+        <a href="reports.html" id="nav-reports">Reports</a>
+        <a href="help.html" id="nav-help">Help</a>
+    </nav>
+    <div class="header-user">
+        <span class="user-badge"><strong id="headerUsername">...</strong> (<span id="headerRole" class="role-tag">...</span>)</span>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+</header>
+
+<div class="container">
+    <h2 class="page">Clinic Practice Reports</h2>
+
+    <!-- Report Tabs -->
+    <div class="card" style="padding-bottom:10px;">
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchReportTab('tabDaily', this)">
+                📋 1. Daily Appointments
+            </button>
+            <button class="tab-btn" onclick="switchReportTab('tabDentist', this)">
+                🩺 2. Dentist Schedule
+            </button>
+            <button class="tab-btn" onclick="switchReportTab('tabRevenue', this)">
+                💰 3. Revenue Analytics
+            </button>
+        </div>
+
+        <!-- ================= TAB 1: DAILY APPOINTMENTS ================= -->
+        <div id="tabDaily" class="tab-pane active">
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dailyDate">Select Date</label>
+                    <input type="date" id="dailyDate">
+                </div>
+                <div>
+                    <button type="button" class="btn" onclick="loadDailyReport()">
+                        Generate Daily Report
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Appt Number</th>
+                            <th>Patient Name</th>
+                            <th>Dentist</th>
+                            <th>Treatment</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dailyReportBody">
+                        <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Select a date and click Generate Daily Report.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: DENTIST SCHEDULE ================= -->
+        <div id="tabDentist" class="tab-pane">
+            <div class="form-row" style="align-items:flex-end;">
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dentistReportSelect">Select Dentist *</label>
+                    <select id="dentistReportSelect">
+                        <option value="">-- Choose Dentist --</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                    <label for="dentistDateFilter">Optional Date</label>
+                    <input type="date" id="dentistDateFilter">
+                </div>
+                <div>
+                    <button type="button" class="btn" onclick="loadDentistReport()">
+                        View Schedule
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Appt Number</th>
+                            <th>Patient Name</th>
+                            <th>Treatment</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dentistReportBody">
+                        <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Select a dentist to view scheduled bookings.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: REVENUE REPORT ================= -->
+        <div id="tabRevenue" class="tab-pane">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h4 style="margin:0; color:var(--dark);">Cumulative Paid Invoices Summary</h4>
+                <button type="button" class="btn btn-secondary" onclick="loadRevenueReport()" style="padding:6px 14px; font-size:12px;">
+                    Refresh Data
+                </button>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Transaction Day</th>
+                            <th style="text-align:center;">Paid Bills Count</th>
+                            <th style="text-align:right;">Total Revenue (LKR)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="revenueReportBody">
+                        <tr><td colspan="3" style="text-align:center; color:var(--text-muted);">Loading revenue records...</td></tr>
+                    </tbody>
+                    <tfoot>
+                        <tr style="font-weight:bold; background:#e1f0ff;">
+                            <td>TOTAL</td>
+                            <td id="revTotalBills" style="text-align:center;">0</td>
+                            <td id="revTotalAmount" style="text-align:right;">LKR 0.00</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    // Tab switching
+    function switchReportTab(tabId, el) {
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(tabId).classList.add('active');
+        el.classList.add('active');
+
+        if (tabId === 'tabRevenue') {
+            loadRevenueReport();
+        }
+    }
+
+    // Set today as default in daily picker
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('dailyDate').value = today;
+
+    // Load dentists dropdown
+    async function loadDentists() {
+        const sel = document.getElementById('dentistReportSelect');
+        const res = await api('/api/meta/dentists');
+        if (res.status === 200 && Array.isArray(res.data)) {
+            res.data.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d.id;
+                opt.textContent = d.name;
+                sel.appendChild(opt);
+            });
+            if (res.data.length > 0) {
+                sel.value = res.data[0].id;
+            }
+        }
+    }
+
+    // 1. Daily Appointments Report
+    async function loadDailyReport() {
+        const date = document.getElementById('dailyDate').value;
+        const tbody = document.getElementById('dailyReportBody');
+        if (!date) return;
+
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Fetching report...</td></tr>';
+
+        const { status, data } = await api(`/api/reports/daily?date=${date}`);
+        if (status === 200 && Array.isArray(data)) {
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">No appointments found for this date.</td></tr>';
+                return;
+            }
+
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${r.appointment_time || ''}</strong></td>
+                    <td><code>${r.appointment_number || ''}</code></td>
+                    <td>${r.patient_name || ''}</td>
+                    <td>${r.dentist_name || ''}</td>
+                    <td>${r.treatment_type || ''}</td>
+                    <td><span class="badge ${r.status === 'PAID' ? 'badge-paid' : 'badge-scheduled'}">${r.status || ''}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--err);">Failed to load daily report.</td></tr>';
+        }
+    }
+
+    // 2. Dentist Schedule Report
+    async function loadDentistReport() {
+        const dentistId = document.getElementById('dentistReportSelect').value;
+        const date = document.getElementById('dentistDateFilter').value;
+        const tbody = document.getElementById('dentistReportBody');
+
+        if (!dentistId) {
+            alert('Please select a dentist.');
+            return;
+        }
+
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Fetching dentist schedule...</td></tr>';
+
+        let url = `/api/reports/dentist?dentistId=${dentistId}`;
+        if (date) url += `&date=${date}`;
+
+        const { status, data } = await api(url);
+        if (status === 200 && Array.isArray(data)) {
+            tbody.innerHTML = '';
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:20px;">No appointments found for this doctor in the chosen period.</td></tr>';
+                return;
+            }
+
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${r.appointment_date || date || '--'}</td>
+                    <td><strong>${r.appointment_time || ''}</strong></td>
+                    <td><code>${r.appointment_number || ''}</code></td>
+                    <td>${r.patient_name || ''}</td>
+                    <td>${r.treatment_type || ''}</td>
+                    <td><span class="badge ${r.status === 'PAID' ? 'badge-paid' : 'badge-scheduled'}">${r.status || ''}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        } else {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--err);">Failed to load dentist schedule.</td></tr>';
+        }
+    }
+
+    // 3. Revenue Analytics Report
+    async function loadRevenueReport() {
+        const tbody = document.getElementById('revenueReportBody');
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">Aggregating revenue data...</td></tr>';
+
+        const { status, data } = await api('/api/reports/revenue');
+        if (status === 200 && Array.isArray(data)) {
+            tbody.innerHTML = '';
+            let totalBills = 0;
+            let totalRevenue = 0;
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:20px;">No paid transactions recorded yet.</td></tr>';
+                document.getElementById('revTotalBills').textContent = '0';
+                document.getElementById('revTotalAmount').textContent = 'LKR 0.00';
+                return;
+            }
+
+            data.forEach(r => {
+                const tr = document.createElement('tr');
+                const bills = parseInt(r.bills || 0);
+                const rev = parseFloat(r.revenue || 0);
+                totalBills += bills;
+                totalRevenue += rev;
+
+                tr.innerHTML = `
+                    <td><strong>${r.day || ''}</strong></td>
+                    <td style="text-align:center;">${bills}</td>
+                    <td style="text-align:right;">LKR ${rev.toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('revTotalBills').textContent = totalBills;
+            document.getElementById('revTotalAmount').textContent = `LKR ${totalRevenue.toFixed(2)}`;
+        } else {
+            tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:var(--err);">Failed to load revenue analytics.</td></tr>';
+        }
+    }
+
+    async function init() {
+        await initAuth('reports');
+        await loadDentists();
+        loadDailyReport();
+    }
+
+    init();
+</script>
+</body>
+</html>

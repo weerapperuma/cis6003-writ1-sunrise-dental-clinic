@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sunrise Dental Clinic – Patient Billing & Invoice</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .print-header {
+            display: none;
+            text-align: center;
+            border-bottom: 2px solid #000;
+            padding-bottom: 12px;
+            margin-bottom: 16px;
+        }
+        @media print {
+            .print-header {
+                display: block !important;
+            }
+            .bill-summary-card {
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+            }
+            table {
+                border: 1px solid #000 !important;
+            }
+            th {
+                background: #eee !important;
+                color: #000 !important;
+                border-bottom: 1px solid #000 !important;
+            }
+            td {
+                border-bottom: 1px solid #ddd !important;
+            }
+            .badge-paid {
+                border: 1px solid #000 !important;
+                color: #000 !important;
+                background: transparent !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><a href="dashboard.html">🦷 Sunrise Dental Clinic</a></h1>
+    <nav>
+        <a href="dashboard.html" id="nav-dashboard">Dashboard</a>
+        <a href="appointment.html" id="nav-appointment">New Appointment</a>
+        <a href="search.html" id="nav-search">Search</a>
+        <a href="bill.html" id="nav-bill">Bill</a>
+        <a href="reports.html" id="nav-reports">Reports</a>
+        <a href="help.html" id="nav-help">Help</a>
+    </nav>
+    <div class="header-user">
+        <span class="user-badge"><strong id="headerUsername">...</strong> (<span id="headerRole" class="role-tag">...</span>)</span>
+        <button class="btn-logout" onclick="handleLogout()">Logout</button>
+    </div>
+</header>
+
+<div class="container">
+    <h2 class="page no-print">Patient Billing & Invoice</h2>
+
+    <!-- Actions & Lookup Card -->
+    <div class="card no-print">
+        <h3>🧾 Generate or Retrieve Bill</h3>
+        <p style="color:var(--text-muted); font-size:13px; margin-bottom:14px;">
+            Specify the Appointment ID to generate a new invoice (calculating consultation and treatment fees) or load an existing bill.
+        </p>
+
+        <form id="billForm" onsubmit="event.preventDefault(); generateBill();">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="billAppointmentId">Appointment ID *</label>
+                    <input type="number" id="billAppointmentId" placeholder="e.g. 5" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="billDiscount">Discount Amount (LKR)</label>
+                    <input type="number" id="billDiscount" placeholder="e.g. 500.00" value="0" min="0" step="50">
+                </div>
+            </div>
+
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:6px;">
+                <button type="submit" id="btnGenerate" class="btn">
+                    ⚡ Generate Bill
+                </button>
+                <button type="button" id="btnLoad" class="btn btn-secondary" onclick="loadBill()">
+                    📥 Load Bill
+                </button>
+            </div>
+        </form>
+
+        <div id="billActionMsg" style="display:none;"></div>
+    </div>
+
+    <!-- Printable Bill / Invoice Display Card -->
+    <div class="card" id="billDisplayCard" style="display:none;">
+        <!-- Clean Header for Print Output -->
+        <div class="print-header">
+            <h2 style="margin:0; font-size:22px;">SUNRISE DENTAL CLINIC</h2>
+            <p style="margin:2px 0; font-size:13px;">Official Patient Invoice & Payment Receipt</p>
+            <p style="margin:0; font-size:12px; color:#555;">Colombo, Sri Lanka | Tel: 011-2345678</p>
+        </div>
+
+        <div class="bill-header">
+            <div>
+                <h3 style="margin:0 0 4px;" id="dispBillTitle">Invoice #--</h3>
+                <p style="margin:0; font-size:13px; color:var(--text-muted);" id="dispApptInfo">Appointment ID: --</p>
+            </div>
+            <div>
+                <span id="dispPaymentBadge" class="badge badge-pending">PENDING</span>
+            </div>
+        </div>
+
+        <!-- Bill Items Breakdown Table -->
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 70%;">Item Description</th>
+                        <th style="width: 30%; text-align:right;">Amount (LKR)</th>
+                    </tr>
+                </thead>
+                <tbody id="billItemsBody">
+                    <!-- Populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bill Summary & Total Card -->
+        <div class="bill-summary-card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;">
+                <span>Consultation Fee:</span>
+                <strong id="dispConsultFee">LKR 0.00</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px;">
+                <span>Treatment Fee:</span>
+                <strong id="dispTreatmentFee">LKR 0.00</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px; font-size:14px; color:var(--err);">
+                <span>Discount Applied:</span>
+                <strong id="dispDiscount">- LKR 0.00</strong>
+            </div>
+
+            <div class="bill-total-box">
+                <span>TOTAL PAYABLE</span>
+                <span id="dispTotalAmount" style="font-size:22px;">LKR 0.00</span>
+            </div>
+        </div>
+
+        <!-- Action Controls for Cashier -->
+        <div style="display:flex; gap:12px; margin-top:20px;" class="no-print">
+            <button type="button" class="btn btn-success" id="btnMarkPaid" onclick="markPaid()" style="display:none;">
+                ✓ Mark as PAID
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="window.print()">
+                🖨️ Print Invoice
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="js/api.js"></script>
+<script>
+    let activeBill = null;
+
+    // Check for URL query param e.g. bill.html?appointmentId=5
+    function checkQueryParam() {
+        const params = new URLSearchParams(window.location.search);
+        const apptId = params.get('appointmentId');
+        if (apptId) {
+            document.getElementById('billAppointmentId').value = apptId;
+            loadBill();
+        }
+    }
+
+    // Generate Bill (POST /api/bills)
+    async function generateBill() {
+        const appointmentId = parseInt(document.getElementById('billAppointmentId').value);
+        const discount = parseFloat(document.getElementById('billDiscount').value || '0');
+        const msgEl = document.getElementById('billActionMsg');
+        const btn = document.getElementById('btnGenerate');
+
+        hideMsg(msgEl);
+        btn.disabled = true;
+        btn.textContent = 'Generating...';
+
+        try {
+            const { status, data } = await api('/api/bills', {
+                method: 'POST',
+                body: JSON.stringify({ appointmentId, discount })
+            });
+
+            if (status === 201 && data && data.success) {
+                showMsg(msgEl, '✓ Bill generated successfully!', true);
+                renderBillDetails(data.bill, data.items);
+            } else if (status === 409) {
+                showMsg(msgEl, (data && data.message) ? data.message : 'A bill already exists for this appointment (1:1 rule). Click "Load Bill" to view it.', false);
+            } else {
+                const err = (data && data.message) ? data.message : `Error generating bill (HTTP ${status})`;
+                showMsg(msgEl, err, false);
+            }
+        } catch (e) {
+            showMsg(msgEl, 'Network failure while creating bill.', false);
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '⚡ Generate Bill';
+        }
+    }
+
+    // Load Bill (GET /api/bills?appointmentId=)
+    async function loadBill() {
+        const appointmentId = parseInt(document.getElementById('billAppointmentId').value);
+        const msgEl = document.getElementById('billActionMsg');
+        const btn = document.getElementById('btnLoad');
+
+        if (!appointmentId) {
+            showMsg(msgEl, 'Please enter a valid Appointment ID.', false);
+            return;
+        }
+
+        hideMsg(msgEl);
+        btn.disabled = true;
+
+        try {
+            const { status, data } = await api(`/api/bills?appointmentId=${appointmentId}`);
+            if (status === 200 && data && data.success) {
+                showMsg(msgEl, '✓ Bill loaded successfully.', true);
+                renderBillDetails(data.bill, data.items);
+            } else if (status === 404) {
+                showMsg(msgEl, (data && data.message) ? data.message : 'No bill found for this appointment.', false);
+                document.getElementById('billDisplayCard').style.display = 'none';
+            } else {
+                showMsg(msgEl, (data && data.message) ? data.message : `Failed to load bill (HTTP ${status}).`, false);
+            }
+        } catch (e) {
+            showMsg(msgEl, 'Network failure while loading bill.', false);
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Render Bill View
+    function renderBillDetails(bill, items) {
+        activeBill = bill;
+        document.getElementById('billDisplayCard').style.display = 'block';
+
+        document.getElementById('dispBillTitle').textContent = `Invoice #${bill.billId}`;
+        document.getElementById('dispApptInfo').textContent = `Appointment ID: ${bill.appointmentId} | Generator User #${bill.generatedBy}`;
+
+        const badge = document.getElementById('dispPaymentBadge');
+        badge.textContent = bill.paymentStatus;
+        badge.className = 'badge ' + (bill.paymentStatus === 'PAID' ? 'badge-paid' : 'badge-pending');
+
+        const consultFee = parseFloat(bill.consultationFee || 0);
+        const treatmentFee = parseFloat(bill.treatmentFee || 0);
+        const discount = parseFloat(bill.discount || 0);
+        const total = parseFloat(bill.totalAmount || 0);
+
+        document.getElementById('dispConsultFee').textContent = `LKR ${consultFee.toFixed(2)}`;
+        document.getElementById('dispTreatmentFee').textContent = `LKR ${treatmentFee.toFixed(2)}`;
+        document.getElementById('dispDiscount').textContent = `- LKR ${discount.toFixed(2)}`;
+        document.getElementById('dispTotalAmount').textContent = `LKR ${total.toFixed(2)}`;
+
+        // Render line items
+        const tbody = document.getElementById('billItemsBody');
+        tbody.innerHTML = '';
+
+        if (Array.isArray(items) && items.length > 0) {
+            items.forEach(it => {
+                const tr = document.createElement('tr');
+                const amt = parseFloat(it.amount || 0);
+                tr.innerHTML = `
+                    <td>${it.description}</td>
+                    <td style="text-align:right;">${amt < 0 ? '-' : ''}LKR ${Math.abs(amt).toFixed(2)}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Show/Hide Mark Paid Button
+        const payBtn = document.getElementById('btnMarkPaid');
+        if (bill.paymentStatus === 'PAID') {
+            payBtn.style.display = 'none';
+        } else {
+            payBtn.style.display = 'inline-flex';
+            payBtn.textContent = `✓ Mark as PAID (LKR ${total.toFixed(2)})`;
+        }
+    }
+
+    // Mark as PAID (POST /api/bills/{billId}/pay)
+    async function markPaid() {
+        if (!activeBill) return;
+        const payBtn = document.getElementById('btnMarkPaid');
+        payBtn.disabled = true;
+        payBtn.textContent = 'Processing...';
+
+        const { status, data } = await api(`/api/bills/${activeBill.billId}/pay`, {
+            method: 'POST'
+        });
+
+        if (status === 200 && data && data.success) {
+            activeBill.paymentStatus = 'PAID';
+            const badge = document.getElementById('dispPaymentBadge');
+            badge.textContent = 'PAID';
+            badge.className = 'badge badge-paid';
+            payBtn.style.display = 'none';
+            const msgEl = document.getElementById('billActionMsg');
+            showMsg(msgEl, '✓ ' + (data.message || 'Bill marked as PAID.'), true);
+        } else {
+            alert('Payment failed: ' + (data && data.message ? data.message : status));
+            payBtn.disabled = false;
+        }
+    }
+
+    async function init() {
+        await initAuth('bill');
+        checkQueryParam();
+    }
+
+    init();
+</script>
+</body>
+</html>

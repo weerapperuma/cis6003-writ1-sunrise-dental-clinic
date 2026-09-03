@@ -6,39 +6,6 @@
     <title>Sunrise Dental Clinic – Staff Login</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .demo-creds {
-            margin-top: 18px;
-            padding-top: 14px;
-            border-top: 1px dashed #bcd;
-            font-size: 13px;
-            color: #556;
-        }
-        .demo-creds strong {
-            display: block;
-            margin-bottom: 6px;
-            color: var(--dark);
-        }
-        .demo-btns {
-            display: flex;
-            gap: 8px;
-            margin-top: 6px;
-        }
-        .demo-btn {
-            flex: 1;
-            padding: 6px 10px;
-            background: #eef5fb;
-            color: var(--blue);
-            border: 1px solid var(--blue);
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-top: 0;
-            transition: all 0.2s;
-        }
-        .demo-btn:hover {
-            background: var(--blue);
-            color: #fff;
-        }
         button:disabled {
             opacity: 0.6;
             cursor: not-allowed;
@@ -58,25 +25,11 @@
         
         <button type="submit" id="submitBtn">Login</button>
         <div id="msg" class="msg err" style="display:none"></div>
-
-        <div class="demo-creds">
-            <strong>Quick Fill Test Credentials:</strong>
-            <div class="demo-btns">
-                <button type="button" class="demo-btn" onclick="fillCreds('admin', 'password123')">Admin</button>
-                <button type="button" class="demo-btn" onclick="fillCreds('reception', 'password123')">Receptionist</button>
-            </div>
-        </div>
     </form>
 </div>
 
 <script src="js/api.js"></script>
 <script>
-    function fillCreds(user, pass) {
-        document.getElementById('username').value = user;
-        document.getElementById('password').value = pass;
-        document.getElementById('username').focus();
-    }
-
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const username = document.getElementById('username').value.trim();

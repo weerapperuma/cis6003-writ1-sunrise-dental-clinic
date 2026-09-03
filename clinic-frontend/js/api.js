@@ -1,67 +1,95 @@
-let detectedBase = null;
-
-// Resolve API base URL dynamically
-function getApiBase() {
-    if (detectedBase !== null) return detectedBase;
-    // If accessed through Tomcat on port 8080
+// Global API helper
+function getBase() {
+    if (window.location.pathname.startsWith('/clinic-service')) {
+        return '/clinic-service';
+    }
     if (window.location.origin.includes(':8080')) {
-        if (window.location.pathname.startsWith('/clinic-service')) {
-            return '/clinic-service';
-        }
         return '';
     }
-    // Target active Tomcat server at root http://localhost:8080
-    return 'http://localhost:8080';
+    // If running from Live Server (port 5500, etc.), direct to backend port 8080
+    if (window.location.port && window.location.port !== '8080') {
+        return 'http://localhost:8080';
+    }
+    return '';
 }
 
-async function api(path, options = {}) {
-    const base = getApiBase();
-    const cleanPath = path.startsWith('/') ? path : '/' + path;
-    const url = path.startsWith('http') ? path : `${base}${cleanPath}`;
-    try {
-        let res = await fetch(url, {
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include', // Ensures session cookie (JSESSIONID) is stored and sent
-            ...options
-        });
+const API_ROOT = getBase();
 
-        // Auto-fallback: if 404, check alternate base URL (/clinic-service vs root)
+async function api(path, options = {}) {
+    const cleanPath = path.startsWith('/') ? path : '/' + path;
+    const url = path.startsWith('http') ? path : `${API_ROOT}${cleanPath}`;
+
+    const defaultHeaders = { 'Content-Type': 'application/json' };
+    const opts = {
+        headers: { ...defaultHeaders, ...(options.headers || {}) },
+        credentials: 'include', // sends session cookie (JSESSIONID)
+        ...options
+    };
+
+    try {
+        let res = await fetch(url, opts);
+
+        // Fallback for context path /clinic-service if running directly under /clinic-service
         if (res.status === 404 && !path.startsWith('http')) {
-            const altBase = (base === 'http://localhost:8080') ? 'http://localhost:8080/clinic-service' : 'http://localhost:8080';
-            const altUrl = `${altBase}${cleanPath}`;
+            const altUrl = (API_ROOT === '' || API_ROOT === 'http://localhost:8080')
+                ? `http://localhost:8080/clinic-service${cleanPath}`
+                : cleanPath;
             try {
-                const altRes = await fetch(altUrl, {
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    ...options
-                });
+                const altRes = await fetch(altUrl, opts);
                 if (altRes.status !== 404) {
-                    detectedBase = altBase;
                     res = altRes;
                 }
-            } catch (ignore) {}
+            } catch (e) {}
         }
 
         let data = null;
-        try { data = await res.json(); } catch (e) {}
+        try {
+            data = await res.json();
+        } catch (e) {}
         return { status: res.status, data };
-    } catch (networkError) {
-        console.error('API call failed:', networkError);
-        return { status: 0, data: { success: false, message: 'Cannot connect to backend server at ' + base } };
+    } catch (err) {
+        console.error('API call failed for ' + url, err);
+        return { status: 0, data: { success: false, message: 'Server connection error.' } };
     }
 }
 
-async function requireLogin() {
+// Global Auth Check for Every Page
+async function initAuth(navName) {
     const { status, data } = await api('/api/auth/me');
     if (status === 401 || !data || !data.success) {
         location.replace('login.html');
         return null;
     }
+
+    const userEl = document.getElementById('headerUsername');
+    const roleEl = document.getElementById('headerRole');
+    if (userEl) userEl.textContent = data.username || 'Staff';
+    if (roleEl) roleEl.textContent = (data.role || 'USER').toUpperCase();
+
+    if (navName) {
+        const navLink = document.getElementById('nav-' + navName);
+        if (navLink) navLink.classList.add('active');
+    }
+
     return data;
 }
 
-function showMsg(el, text, ok) {
-    el.textContent = text;
-    el.className = 'msg ' + (ok ? 'ok' : 'err');
+// Global Logout Handler
+async function handleLogout() {
+    try {
+        await api('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    location.replace('login.html');
+}
+
+// Utility message display
+function showMsg(el, text, isSuccess) {
+    if (!el) return;
+    el.innerHTML = text;
+    el.className = 'msg ' + (isSuccess ? 'ok' : 'err');
     el.style.display = 'block';
+}
+
+function hideMsg(el) {
+    if (el) el.style.display = 'none';
 }
