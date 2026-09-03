@@ -25,9 +25,12 @@ public class ReportController {
     public ResponseEntity<?> daily(@RequestParam(name = "date") String date, HttpSession session) {
         if (!loggedIn(session)) return ResponseEntity.status(401).body(Map.of("success", false));
         return ResponseEntity.ok(jdbc.queryForList(
-                "SELECT appointment_time, appointment_number, patient_name, dentist_name, " +
-                        "treatment_type, status FROM vw_daily_appointments " +
-                        "WHERE appointment_date = ? ORDER BY appointment_time", LocalDate.parse(date)));
+                "SELECT a.appointment_id, a.appointment_time, a.appointment_number, p.patient_name, d.dentist_name, " +
+                        "t.treatment_type, a.status FROM appointments a " +
+                        "JOIN patients p ON p.patient_id = a.patient_id " +
+                        "JOIN dentists d ON d.dentist_id = a.dentist_id " +
+                        "JOIN treatments t ON t.treatment_id = a.treatment_id " +
+                        "WHERE a.appointment_date = ? ORDER BY a.appointment_time", LocalDate.parse(date)));
     }
 
     @GetMapping("/dentist")
@@ -37,14 +40,14 @@ public class ReportController {
         if (!loggedIn(session)) return ResponseEntity.status(401).body(Map.of("success", false));
         if (date != null && !date.isBlank()) {
             return ResponseEntity.ok(jdbc.queryForList(
-                    "SELECT a.appointment_time, a.appointment_number, p.patient_name, t.treatment_type, a.status " +
+                    "SELECT a.appointment_id, a.appointment_time, a.appointment_number, p.patient_name, t.treatment_type, a.status " +
                             "FROM appointments a JOIN patients p ON p.patient_id = a.patient_id " +
                             "JOIN treatments t ON t.treatment_id = a.treatment_id " +
                             "WHERE a.dentist_id = ? AND a.appointment_date = ? ORDER BY a.appointment_time",
                     dentistId, LocalDate.parse(date)));
         }
         return ResponseEntity.ok(jdbc.queryForList(
-                "SELECT a.appointment_date, a.appointment_time, a.appointment_number, p.patient_name, " +
+                "SELECT a.appointment_id, a.appointment_date, a.appointment_time, a.appointment_number, p.patient_name, " +
                         "t.treatment_type, a.status FROM appointments a JOIN patients p ON p.patient_id = a.patient_id " +
                         "JOIN treatments t ON t.treatment_id = a.treatment_id " +
                         "WHERE a.dentist_id = ? ORDER BY a.appointment_date, a.appointment_time", dentistId));

@@ -71,6 +71,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Appt ID</th>
                         <th>Appointment #</th>
                         <th>Patient Name</th>
                         <th>Dentist</th>
@@ -83,7 +84,7 @@
                 </thead>
                 <tbody id="searchResultsBody">
                     <tr>
-                        <td colspan="8" style="text-align:center; color:var(--text-muted); padding:24px;">
+                        <td colspan="9" style="text-align:center; color:var(--text-muted); padding:24px;">
                             Enter search criteria above and click <strong>Search</strong> to display appointment records.
                         </td>
                     </tr>
@@ -115,7 +116,7 @@
         const tbody = document.getElementById('searchResultsBody');
         const countSpan = document.getElementById('resultCount');
 
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px;">Searching records...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:18px;">Searching records...</td></tr>';
 
         const params = [];
         if (date) params.push(`date=${encodeURIComponent(date)}`);
@@ -133,7 +134,7 @@
             if (list.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">
+                        <td colspan="9" style="text-align:center; padding:32px; color:var(--text-muted);">
                             <div style="font-size:32px; margin-bottom:6px;">📂</div>
                             <strong>No appointments found matching your search.</strong><br>
                             Try adjusting your filters or date range.
@@ -151,10 +152,11 @@
 
                 const apptId = item.appointmentId || '';
                 const billLink = apptId
-                    ? `<a href="bill.html?appointmentId=${apptId}" class="btn" style="padding:4px 8px; font-size:12px; text-decoration:none;">💳 Bill</a>`
+                    ? `<a href="bill.html?appointmentId=${apptId}" class="btn" style="padding:4px 8px; font-size:12px; text-decoration:none;">💳 Bill ID #${apptId}</a>`
                     : `<a href="bill.html" class="btn btn-secondary" style="padding:4px 8px; font-size:12px; text-decoration:none;">Go to Bill</a>`;
 
                 tr.innerHTML = `
+                    <td><strong style="color:var(--blue); font-size:14px;">#${apptId || '--'}</strong></td>
                     <td><code>${item.appointmentNumber || ''}</code></td>
                     <td><strong>${item.patientName || ''}</strong></td>
                     <td>${item.dentistName || ''}</td>
@@ -167,7 +169,7 @@
                 tbody.appendChild(tr);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--err); padding:18px;">Error querying appointments.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:var(--err); padding:18px;">Error querying appointments.</td></tr>';
             countSpan.textContent = 'Error';
         }
     }

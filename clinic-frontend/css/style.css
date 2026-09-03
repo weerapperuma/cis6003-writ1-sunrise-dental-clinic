@@ -457,7 +457,12 @@ tbody tr:hover {
     margin: 0 auto;
 }
 
-/* Print Styles */
+/* Print Styles - Strips browser URL, timestamp, and headers/footers */
+@page {
+    margin: 0;
+    size: auto;
+}
+
 @media print {
     header, nav, .btn-logout, button, .no-print {
         display: none !important;
@@ -465,6 +470,8 @@ tbody tr:hover {
     body {
         background: #fff;
         color: #000;
+        margin: 1.2cm 1.5cm;
+        padding: 0;
     }
     .container {
         max-width: 100%;

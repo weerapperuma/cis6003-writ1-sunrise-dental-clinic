@@ -6,6 +6,12 @@
     <title>Sunrise Dental Clinic – Patient Billing & Invoice</title>
     <link rel="stylesheet" href="css/style.css">
     <style>
+        /* Suppress browser default print headers (title, date) & footers (URL, page numbers) */
+        @page {
+            margin: 0;
+            size: auto;
+        }
+
         .print-header {
             display: none;
             text-align: center;
@@ -13,7 +19,14 @@
             padding-bottom: 12px;
             margin-bottom: 16px;
         }
+
         @media print {
+            body {
+                background: #fff !important;
+                color: #000 !important;
+                margin: 1.2cm 1.5cm !important;
+                padding: 0 !important;
+            }
             .print-header {
                 display: block !important;
             }
@@ -37,6 +50,59 @@
                 color: #000 !important;
                 background: transparent !important;
             }
+        }
+
+        /* Autocomplete dropdown for appointments */
+        .search-container {
+            position: relative;
+        }
+        .appt-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+            max-height: 250px;
+            overflow-y: auto;
+            z-index: 1000;
+            margin-top: 4px;
+        }
+        .appt-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid #f0f4f8;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .appt-item:hover {
+            background: #edf5fd;
+        }
+        .appt-item:last-child {
+            border-bottom: none;
+        }
+        .appt-item-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 13px;
+        }
+        .appt-item-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .selected-chip {
+            margin-top: 8px;
+            padding: 9px 12px;
+            background: #e8f4fd;
+            border: 1px solid #bce0fd;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
@@ -65,15 +131,45 @@
     <div class="card no-print">
         <h3>🧾 Generate or Retrieve Bill</h3>
         <p style="color:var(--text-muted); font-size:13px; margin-bottom:14px;">
-            Specify the Appointment ID to generate a new invoice (calculating consultation and treatment fees) or load an existing bill.
+            Type a patient name or appointment number to search, select from the dropdown, then generate or load the invoice.
         </p>
 
         <form id="billForm" onsubmit="event.preventDefault(); generateBill();">
             <div class="form-row">
-                <div class="form-group">
-                    <label for="billAppointmentId">Appointment ID *</label>
-                    <input type="number" id="billAppointmentId" placeholder="e.g. 5" min="1" required>
+                <!-- Appointment Live Search & Dropdown -->
+                <div class="form-group search-container" style="grid-column: span 2;">
+                    <label for="apptSearchInput">Search Appointment (Patient Name, Appt Number, or ID) *</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="apptSearchInput" placeholder="Start typing name (e.g. Nimal) or number (e.g. APT-)..." autocomplete="off" oninput="handleApptSearchInput(this.value)">
+                        <button type="button" class="btn btn-secondary" onclick="toggleAllDropdown()" style="width:auto; white-space:nowrap; padding:9px 14px; font-size:13px;">
+                            📋 Browse All
+                        </button>
+                    </div>
+
+                    <!-- Hidden Appointment ID synced with selection -->
+                    <input type="hidden" id="billAppointmentId" name="billAppointmentId">
+
+                    <!-- Dropdown List Container -->
+                    <div id="apptDropdownList" class="appt-dropdown" style="display:none;"></div>
+
+                    <!-- Selected Appointment Chip Display -->
+                    <div id="selectedApptChip" class="selected-chip" style="display:none;">
+                        <span id="selectedApptText"></span>
+                        <button type="button" onclick="clearSelectedAppt()" style="background:none; border:none; color:var(--err); cursor:pointer; font-weight:bold; font-size:13px; padding:0 4px;" title="Clear and select another">
+                            ✕ Change
+                        </button>
+                    </div>
                 </div>
+            </div>
+
+            <div class="form-row">
+                <!-- Manual ID Field (Direct entry fallback) -->
+                <div class="form-group">
+                    <label for="manualApptId">Direct Appointment ID (Optional)</label>
+                    <input type="number" id="manualApptId" placeholder="Or enter integer ID, e.g. 5" min="1" oninput="handleManualIdInput(this.value)">
+                </div>
+
+                <!-- Discount Amount -->
                 <div class="form-group">
                     <label for="billDiscount">Discount Amount (LKR)</label>
                     <input type="number" id="billDiscount" placeholder="e.g. 500.00" value="0" min="0" step="50">
@@ -99,7 +195,7 @@
         <div class="print-header">
             <h2 style="margin:0; font-size:22px;">SUNRISE DENTAL CLINIC</h2>
             <p style="margin:2px 0; font-size:13px;">Official Patient Invoice & Payment Receipt</p>
-            <p style="margin:0; font-size:12px; color:#555;">Colombo, Sri Lanka | Tel: 011-2345678</p>
+            <p style="margin:0; font-size:12px; color:#555;">Colombo, Sri Lanka | Tel: 011-2345678 | Date: <span id="printDateNow"></span></p>
         </div>
 
         <div class="bill-header">
@@ -153,7 +249,7 @@
             <button type="button" class="btn btn-success" id="btnMarkPaid" onclick="markPaid()" style="display:none;">
                 ✓ Mark as PAID
             </button>
-            <button type="button" class="btn btn-secondary" onclick="window.print()">
+            <button type="button" class="btn btn-secondary" onclick="printInvoice()">
                 🖨️ Print Invoice
             </button>
         </div>
@@ -163,6 +259,127 @@
 <script src="js/api.js"></script>
 <script>
     let activeBill = null;
+    let cachedAppointments = [];
+
+    // Preload appointments for live dropdown search
+    async function preloadAppointments() {
+        const { status, data } = await api('/api/appointments/search');
+        if (status === 200 && data && Array.isArray(data.appointments)) {
+            cachedAppointments = data.appointments;
+        }
+    }
+
+    // Handle input typing in appointment search field
+    function handleApptSearchInput(query) {
+        const dropdown = document.getElementById('apptDropdownList');
+        const q = query.trim().toLowerCase();
+
+        if (!q) {
+            dropdown.style.display = 'none';
+            return;
+        }
+
+        const filtered = cachedAppointments.filter(a => {
+            const idMatch = a.appointmentId && String(a.appointmentId).includes(q);
+            const numMatch = a.appointmentNumber && a.appointmentNumber.toLowerCase().includes(q);
+            const nameMatch = a.patientName && a.patientName.toLowerCase().includes(q);
+            const doctorMatch = a.dentistName && a.dentistName.toLowerCase().includes(q);
+            return idMatch || numMatch || nameMatch || doctorMatch;
+        });
+
+        renderDropdownItems(filtered);
+    }
+
+    // Toggle "Browse All" dropdown
+    function toggleAllDropdown() {
+        const dropdown = document.getElementById('apptDropdownList');
+        if (dropdown.style.display === 'block') {
+            dropdown.style.display = 'none';
+        } else {
+            renderDropdownItems(cachedAppointments);
+        }
+    }
+
+    // Render items inside dropdown
+    function renderDropdownItems(list) {
+        const dropdown = document.getElementById('apptDropdownList');
+        dropdown.innerHTML = '';
+
+        if (!list || list.length === 0) {
+            dropdown.innerHTML = '<div style="padding:12px; color:var(--text-muted); font-size:13px; text-align:center;">No matching appointments found.</div>';
+            dropdown.style.display = 'block';
+            return;
+        }
+
+        list.forEach(a => {
+            const div = document.createElement('div');
+            div.className = 'appt-item';
+            div.innerHTML = `
+                <div class="appt-item-top">
+                    <span><strong style="color:var(--blue);">Appt ID #${a.appointmentId}</strong> | <code>${a.appointmentNumber}</code></span>
+                    <span class="badge ${a.status === 'PAID' ? 'badge-paid' : 'badge-scheduled'}">${a.status}</span>
+                </div>
+                <div class="appt-item-meta">
+                    <strong>${a.patientName}</strong> (${a.dentistName} - ${a.treatmentType}) • ${a.appointmentDate} ${a.appointmentTime}
+                </div>
+            `;
+            div.onclick = () => selectAppointment(a);
+            dropdown.appendChild(div);
+        });
+
+        dropdown.style.display = 'block';
+    }
+
+    // When an appointment is selected from dropdown
+    function selectAppointment(a) {
+        document.getElementById('billAppointmentId').value = a.appointmentId;
+        document.getElementById('manualApptId').value = a.appointmentId;
+        document.getElementById('apptSearchInput').value = `${a.appointmentNumber} - ${a.patientName}`;
+
+        const chip = document.getElementById('selectedApptChip');
+        const text = document.getElementById('selectedApptText');
+        text.innerHTML = `<strong>Selected:</strong> Appt ID <strong>#${a.appointmentId}</strong> | <code>${a.appointmentNumber}</code> — <strong>${a.patientName}</strong> (${a.treatmentType})`;
+        chip.style.display = 'flex';
+
+        document.getElementById('apptDropdownList').style.display = 'none';
+
+        // Automatically load bill if it exists
+        loadBill();
+    }
+
+    // Clear selected appointment
+    function clearSelectedAppt() {
+        document.getElementById('billAppointmentId').value = '';
+        document.getElementById('manualApptId').value = '';
+        document.getElementById('apptSearchInput').value = '';
+        document.getElementById('selectedApptChip').style.display = 'none';
+        document.getElementById('billDisplayCard').style.display = 'none';
+        document.getElementById('apptSearchInput').focus();
+    }
+
+    // Handle manual integer ID input
+    function handleManualIdInput(val) {
+        const id = parseInt(val);
+        document.getElementById('billAppointmentId').value = id || '';
+        if (id && cachedAppointments.length) {
+            const match = cachedAppointments.find(a => a.appointmentId === id);
+            if (match) {
+                document.getElementById('apptSearchInput').value = `${match.appointmentNumber} - ${match.patientName}`;
+                const chip = document.getElementById('selectedApptChip');
+                const text = document.getElementById('selectedApptText');
+                text.innerHTML = `<strong>Selected:</strong> Appt ID <strong>#${match.appointmentId}</strong> | <code>${match.appointmentNumber}</code> — <strong>${match.patientName}</strong>`;
+                chip.style.display = 'flex';
+            }
+        }
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const searchBox = document.querySelector('.search-container');
+        if (searchBox && !searchBox.contains(e.target)) {
+            document.getElementById('apptDropdownList').style.display = 'none';
+        }
+    });
 
     // Check for URL query param e.g. bill.html?appointmentId=5
     function checkQueryParam() {
@@ -170,6 +387,14 @@
         const apptId = params.get('appointmentId');
         if (apptId) {
             document.getElementById('billAppointmentId').value = apptId;
+            document.getElementById('manualApptId').value = apptId;
+            if (cachedAppointments.length) {
+                const match = cachedAppointments.find(a => a.appointmentId === parseInt(apptId));
+                if (match) {
+                    selectAppointment(match);
+                    return;
+                }
+            }
             loadBill();
         }
     }
@@ -180,6 +405,11 @@
         const discount = parseFloat(document.getElementById('billDiscount').value || '0');
         const msgEl = document.getElementById('billActionMsg');
         const btn = document.getElementById('btnGenerate');
+
+        if (!appointmentId) {
+            showMsg(msgEl, 'Please search and select an appointment first.', false);
+            return;
+        }
 
         hideMsg(msgEl);
         btn.disabled = true;
@@ -192,7 +422,7 @@
             });
 
             if (status === 201 && data && data.success) {
-                showMsg(msgEl, '✓ Bill generated successfully!', true);
+                showMsg(msgEl, '✓ Bill generated successfully (Trigger Total Calculated)!', true);
                 renderBillDetails(data.bill, data.items);
             } else if (status === 409) {
                 showMsg(msgEl, (data && data.message) ? data.message : 'A bill already exists for this appointment (1:1 rule). Click "Load Bill" to view it.', false);
@@ -215,7 +445,7 @@
         const btn = document.getElementById('btnLoad');
 
         if (!appointmentId) {
-            showMsg(msgEl, 'Please enter a valid Appointment ID.', false);
+            showMsg(msgEl, 'Please search and select an appointment first.', false);
             return;
         }
 
@@ -228,7 +458,7 @@
                 showMsg(msgEl, '✓ Bill loaded successfully.', true);
                 renderBillDetails(data.bill, data.items);
             } else if (status === 404) {
-                showMsg(msgEl, (data && data.message) ? data.message : 'No bill found for this appointment.', false);
+                showMsg(msgEl, (data && data.message) ? data.message : `No bill found yet for Appointment #${appointmentId}. Click "Generate Bill" to create one.`, false);
                 document.getElementById('billDisplayCard').style.display = 'none';
             } else {
                 showMsg(msgEl, (data && data.message) ? data.message : `Failed to load bill (HTTP ${status}).`, false);
@@ -246,7 +476,9 @@
         document.getElementById('billDisplayCard').style.display = 'block';
 
         document.getElementById('dispBillTitle').textContent = `Invoice #${bill.billId}`;
-        document.getElementById('dispApptInfo').textContent = `Appointment ID: ${bill.appointmentId} | Generator User #${bill.generatedBy}`;
+        // Show only Appointment ID (exclude internal generator ID for patient receipt)
+        document.getElementById('dispApptInfo').textContent = `Appointment ID: ${bill.appointmentId}`;
+        updatePrintDate();
 
         const badge = document.getElementById('dispPaymentBadge');
         badge.textContent = bill.paymentStatus;
@@ -313,9 +545,24 @@
         }
     }
 
+    function updatePrintDate() {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const el = document.getElementById('printDateNow');
+        if (el) el.textContent = `${dateStr}, ${timeStr}`;
+    }
+
+    function printInvoice() {
+        updatePrintDate();
+        window.print();
+    }
+
     async function init() {
         await initAuth('bill');
+        await preloadAppointments();
         checkQueryParam();
+        updatePrintDate();
     }
 
     init();

@@ -81,16 +81,18 @@
             <table>
                 <thead>
                     <tr>
+                        <th>Appt ID</th>
                         <th>Time</th>
                         <th>Appt Number</th>
                         <th>Patient Name</th>
                         <th>Dentist</th>
                         <th>Treatment</th>
                         <th>Status</th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody id="todayTableBody">
-                    <tr><td colspan="6" style="text-align:center; color:var(--text-muted);">Loading today's schedule...</td></tr>
+                    <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Loading today's schedule...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -108,7 +110,7 @@
         if (status === 200 && Array.isArray(data)) {
             tbody.innerHTML = '';
             if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:18px;">No appointments scheduled for today yet.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--text-muted); padding:18px;">No appointments scheduled for today yet.</td></tr>';
                 return;
             }
 
@@ -118,18 +120,25 @@
                     ? '<span class="badge badge-paid">PAID</span>'
                     : '<span class="badge badge-scheduled">' + r.status + '</span>';
 
+                const apptId = r.appointment_id || '';
+                const billBtn = apptId
+                    ? `<a href="bill.html?appointmentId=${apptId}" class="btn" style="padding:4px 8px; font-size:12px; text-decoration:none;">💳 Bill ID #${apptId}</a>`
+                    : `<a href="bill.html" class="btn btn-secondary" style="padding:4px 8px; font-size:12px; text-decoration:none;">Go to Bill</a>`;
+
                 tr.innerHTML = `
+                    <td><strong style="color:var(--blue); font-size:14px;">#${apptId || '--'}</strong></td>
                     <td><strong>${r.appointment_time || ''}</strong></td>
                     <td><code>${r.appointment_number || ''}</code></td>
                     <td>${r.patient_name || ''}</td>
                     <td>${r.dentist_name || ''}</td>
                     <td>${r.treatment_type || ''}</td>
                     <td>${statusBadge}</td>
+                    <td>${billBtn}</td>
                 `;
                 tbody.appendChild(tr);
             });
         } else {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--err);">Unable to load today\'s appointments from /api/reports/daily.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:var(--err);">Unable to load today\'s appointments from /api/reports/daily.</td></tr>';
         }
     }
 
